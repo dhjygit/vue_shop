@@ -20,8 +20,6 @@
   </div>
 </template>
 <script>
-import axios from 'axios'
-
 export default {
   name: 'Login',
   data () {
@@ -63,7 +61,7 @@ export default {
       this.$refs.loginFormRef.validate(async (validate) => {
         // eslint-disable-next-line no-useless-return
         if (!validate) return
-        const { data: res } = await axios.post('login', this.loginForm)
+        const { data: res } = await this.$http.post('login', this.loginForm)
         if (res.meta.status !== 200) return this.$message.error('登陆失败')
         this.$message.success('登陆成功')
         window.sessionStorage.setItem('token', res.data.token)
