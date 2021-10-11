@@ -35,7 +35,8 @@
             <el-button type="primary" icon="el-icon-edit" size="mini" @click="updateFormData(scope.row.id)"></el-button>
             <el-button type="danger" icon="el-icon-delete" size="mini" @click="deleteUser(scope.row.id)"></el-button>
             <el-tooltip effect="dark" content="分配角色" placement="top" :enterable="false">
-              <el-button type="warning" icon="el-icon-setting" size="mini"></el-button>
+              <el-button type="warning" icon="el-icon-setting" size="mini"
+                         @click="setRoleDialogOpened(scope.row)"></el-button>
             </el-tooltip>
           </template>
         </el-table-column>
@@ -91,6 +92,22 @@
         <el-button type="primary" @click="updateUser">确 定</el-button>
       </span>
     </el-dialog>
+    <el-dialog title="分配角色" :visible.sync="setRoleDialogVisible" width="30%" :close-on-click-modal="false"
+               @close="setRoleDialogClosed">
+      <div>
+        <p>当前的用户: {{ userInfo.username }}</p>
+        <p>当前的角色: {{ userInfo.rolename }}</p>
+        <p>分配新角色:
+          <el-select v-model="value" placeholder="请选择">
+            <el-option v-for="item in rolesList" :key="item.id" :value="item.id" :label="item.roleName"></el-option>
+          </el-select>
+        </p>
+      </div>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="setRoleDialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="setRole" @close="setRole">确 定</el-button>
+      </span>
+    </el-dialog>
   </div>
 </template>
 <script>
@@ -108,6 +125,13 @@ export default {
       callback(new Error('请输入合法的手机号'))
     }
     return {
+      rolesList: [],
+      value: '',
+      userInfo: {
+        username: '',
+        rolename: ''
+      },
+      setRoleDialogVisible: false,
       queryInfo: {
         query: '',
         pagenum: 1,
@@ -219,10 +243,10 @@ export default {
       this.queryInfo.pagenum = newPage
       this.getUserList()
     },
-    async userStateChanged (userinfo) {
-      const { data: res } = await this.$http.put(`users/${userinfo.id}/state/${userinfo.mg_state}`)
+    async userStateChanged (userInfo) {
+      const { data: res } = await this.$http.put(`users/${userInfo.id}/state/${userInfo.mg_state}`)
       if (res.meta.status !== 200) {
-        userinfo.mg_state = !userinfo.mg_state
+        userInfo.mg_state = !userInfo.mg_state
         return this.$message.error(res.meta.msg)
       }
       this.$message.success(res.meta.msg)
@@ -275,6 +299,29 @@ export default {
         this.getUserList()
         this.$message.success('用户删除成功')
       }
+    },
+    async setRoleDialogOpened (user) {
+      this.userInfo.id = user.id
+      this.userInfo.username = user.username
+      this.userInfo.rolename = user.role_name
+      this.setRoleDialogVisible = true
+      const { data: res } = await this.$http.get('roles')
+      if (res.meta.status !== 200) return this.$message.error('获取权限列表失败')
+      this.$message.success('获取权限列表成功')
+      this.rolesList = res.data
+    },
+    async setRole () {
+      if (!this.value) return this.$message.error('请选择分配的角色')
+      const { data: res } = await this.$http.put(`users/${this.userInfo.id}/role`, { rid: this.value })
+      if (res.meta.status !== 200) return this.$message.error('角色分配失败')
+      this.$message.success('角色分配成功')
+      this.getUserList()
+      this.setRoleDialogVisible = false
+    },
+    setRoleDialogClosed () {
+      this.userInfo.username = ''
+      this.userInfo.rolename = ''
+      this.value = ''
     }
   }
 }
